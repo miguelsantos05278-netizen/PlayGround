@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>A Princesa da Floresta Encantada</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <main class="game-shell">
+    <header class="topbar">
+      <div class="brand">
+        <div class="brand-crest">👑</div>
+        <div>
+          <p class="eyebrow">REINO ENCANTADO</p>
+          <h1>Floresta da Princesa</h1>
+        </div>
+      </div>
+      <div class="stats">
+        <div class="stat"><span class="coin-mini">●</span><strong id="coinCount">0</strong><small>/ <span id="coinGoal">8</span></small></div>
+        <div class="stat"><span>❤️</span><strong id="livesCount">3</strong></div>
+      </div>
+    </header>
+
+    <section class="stage-wrap">
+      <canvas id="game" width="960" height="540" aria-label="Jogo da princesa na floresta"></canvas>
+
+      <div id="startScreen" class="overlay visible">
+        <div class="overlay-card">
+          <div class="crown-large">👑</div>
+          <p class="eyebrow">UMA MISSÃO ENCANTADA</p>
+          <h2>Ajude a princesa a escapar!</h2>
+          <p>Reúna todas as moedas douradas e alcance o castelo antes que os monstros da floresta te encontrem.</p>
+          <button id="startButton" class="primary-button">Começar aventura <span>➜</span></button>
+        </div>
+      </div>
+
+      <div id="endScreen" class="overlay">
+        <div class="overlay-card">
+          <div id="endIcon" class="crown-large">🏰</div>
+          <p id="endEyebrow" class="eyebrow">MISSÃO CUMPRIDA</p>
+          <h2 id="endTitle">Você venceu!</h2>
+          <p id="endText">A princesa voltou ao castelo em segurança.</p>
+          <button id="restartButton" class="primary-button">Jogar novamente <span>↻</span></button>
+        </div>
+      </div>
+
+      <div class="controls" aria-label="Controles">
+        <button id="up" class="control up" aria-label="Mover para cima">▲</button>
+        <button id="left" class="control left" aria-label="Mover para esquerda">◀</button>
+        <button id="down" class="control down" aria-label="Mover para baixo">▼</button>
+        <button id="right" class="control right" aria-label="Mover para direita">▶</button>
+      </div>
+    </section>
+
+    <footer>
+      <p><span class="key">W</span><span class="key">A</span><span class="key">S</span><span class="key">D</span> ou <span class="key">↑</span><span class="key">←</span><span class="key">↓</span><span class="key">→</span> para mover</p>
+      <p class="tip">Colete todas as moedas para abrir a trilha do castelo</p>
+    </footer>
+  </main>
+  <script src="game.js"></script>
+</body>
+</html>
