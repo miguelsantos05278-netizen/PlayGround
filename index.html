@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no"/>
+<title>Princesa da Floresta</title>
+<style>
+*{box-sizing:border-box}html,body{margin:0;width:100%;height:100%;overflow:hidden;font-family:Georgia,'Times New Roman',serif;background:#09140d;touch-action:none}canvas{display:block;width:100%;height:100%}
+#hud{position:absolute;inset:0;pointer-events:none;color:white;text-shadow:0 2px 8px #000}#top{position:absolute;top:max(16px,env(safe-area-inset-top));left:50%;transform:translateX(-50%);width:min(620px,calc(100% - 32px));display:flex;justify-content:space-between;align-items:flex-start}.box{padding:8px 14px;border:1px solid rgba(255,255,255,.25);border-radius:16px;background:linear-gradient(135deg,rgba(9,36,24,.82),rgba(25,67,43,.58));box-shadow:0 8px 20px rgba(0,0,0,.18);backdrop-filter:blur(8px);font:700 17px Georgia}.box small{display:block;font-size:10px;text-transform:uppercase;letter-spacing:2px;opacity:.72}#distance{font-size:24px;color:#ffe7a1}#coins{color:#fff6c2}
+#overlay{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;padding:24px;background:linear-gradient(180deg,rgba(4,19,11,.15),rgba(4,19,11,.78));transition:.35s}#overlay.hidden{opacity:0;pointer-events:none}.card{text-align:center;width:min(520px,100%);padding:28px 26px 24px;border:1px solid rgba(255,255,255,.24);border-radius:28px;background:linear-gradient(145deg,rgba(18,61,39,.93),rgba(5,30,19,.92));box-shadow:0 24px 70px rgba(0,0,0,.5)}.crown{font-size:38px;filter:drop-shadow(0 4px 8px #e7ad24)}h1{margin:5px 0 8px;font-size:clamp(34px,7vw,58px);line-height:.95;color:#fff9d8;text-shadow:0 4px 18px rgba(255,205,92,.25)}.subtitle{margin:0 auto 20px;color:#b9d6bd;font-size:14px;letter-spacing:1.5px}.button{pointer-events:auto;border:1px solid #d9bd68;border-radius:999px;padding:14px 28px;color:#17331d;background:linear-gradient(180deg,#fff4b2,#dab86e);font:700 16px Georgia;box-shadow:0 8px 24px rgba(0,0,0,.28);cursor:pointer}.button:hover{filter:brightness(1.08)}
+#controls{position:absolute;left:0;right:0;bottom:max(20px,env(safe-area-inset-bottom));display:flex;justify-content:space-between;padding:0 24px;pointer-events:none}.control{pointer-events:auto;width:68px;height:68px;border-radius:50%;border:1px solid rgba(255,255,255,.32);background:rgba(8,34,20,.38);backdrop-filter:blur(6px);color:white;font-size:28px;display:grid;place-items:center;user-select:none}.control:active{background:rgba(210,190,111,.55);transform:scale(.94)}#jump{width:78px;height:78px;margin-right:2px}.controls-l{display:flex;gap:10px}
+#gameover h2{margin:6px 0;font-size:38px;color:#fff5c7}@media(min-width:900px){.control{opacity:.7}}
+</style>
+</head>
+<body>
+<canvas id="game"></canvas>
+<div id="hud"><div id="top"><div class="box"><small>Distância</small><span id="distance">0</span> m</div><div class="box"><small>Estrelas</small><span id="coins">0</span> ✦</div></div>
+<div id="overlay"><div class="card" id="start"><div class="crown">♛</div><h1>Princesa da<br>Floresta</h1><p class="subtitle">CORRA • PULE • ENCONTRE O CAMINHO</p><button class="button" id="play">Começar a aventura</button></div><div class="card" id="gameover" style="display:none"><div class="crown">✦</div><h2>A jornada continua</h2><p class="subtitle" id="result">Você correu 0 metros</p><button class="button" id="again">Correr novamente</button></div></div>
+<div id="controls"><div class="controls-l"><div class="control" data-action="left">‹</div><div class="control" data-action="right">›</div></div><div class="control" id="jump" data-action="jump">↑</div></div></div>
+<script src="https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js"></script>
+<script>
+const canvas=document.getElementById('game'),scene=new THREE.Scene();scene.fog=new THREE.FogExp2(0x91ab82,.018);
+const camera=new THREE.PerspectiveCamera(58,innerWidth/innerHeight,.1,500);camera.position.set(0,5.2,11);
+const renderer=new THREE.WebGLRenderer({canvas,antialias:true});renderer.setSize(innerWidth,innerHeight);renderer.setPixelRatio(Math.min(devicePixelRatio,2));renderer.shadowMap.enabled=true;renderer.shadowMap.type=THREE.PCFSoftShadowMap;renderer.toneMapping=THREE.ACESFilmicToneMapping;renderer.toneMappingExposure=1.05;
+scene.background=new THREE.Color(0x9bb78e);
+const hemi=new THREE.HemisphereLight(0xd8edff,0x31552d,2.2);scene.add(hemi);const sun=new THREE.DirectionalLight(0xffefc2,3.2);sun.position.set(-15,28,10);sun.castShadow=true;sun.shadow.mapSize.set(1024,1024);sun.shadow.camera.left=-18;sun.shadow.camera.right=18;sun.shadow.camera.top=18;sun.shadow.camera.bottom=-18;scene.add(sun);
+
+function mat(c,rough=.8){return new THREE.MeshStandardMaterial({color:c,roughness:rough})}
+const road=new THREE.Mesh(new THREE.PlaneGeometry(20,600),mat(0x6f6d45));road.rotation.x=-Math.PI/2;road.position.z=-220;road.receiveShadow=true;scene.add(road);
+const grass=new THREE.Mesh(new THREE.PlaneGeometry(100,600),mat(0x2e6338));grass.rotation.x=-Math.PI/2;grass.position.y=-.03;grass.position.z=-220;grass.receiveShadow=true;scene.add(grass);
+
+const laneX=[-5,0,5];
+function makeTree(x,z,s=1){const g=new THREE.Group();const trunk=new THREE.Mesh(new THREE.CylinderGeometry(.28*s,.45*s,3.8*s,8),mat(0x553925));trunk.position.y=1.9*s;trunk.castShadow=true;g.add(trunk);for(let i=0;i<3;i++){const crown=new THREE.Mesh(new THREE.ConeGeometry((2-i*.35)*s,3.4*s,9),mat(i%2?0x1d5530:0x245f36));crown.position.y=(3.4+i*1.2)*s;crown.castShadow=true;g.add(crown)}g.position.set(x,0,z);scene.add(g);return g}
+for(let i=0;i<70;i++){let side=i%2?1:-1;let z=-i*8+15;makeTree(side*(8+Math.random()*18),z,.75+Math.random()*.7);if(i%3===0)makeTree(side*(12+Math.random()*12),z-4,.7+Math.random()*4*.1)}
+function makeFlower(x,z,c){const g=new THREE.Group();const stem=new THREE.Mesh(new THREE.CylinderGeometry(.025,.035,.5,5),mat(0x4d7a3d));stem.position.y=.25;g.add(stem);const bloom=new THREE.Mesh(new THREE.SphereGeometry(.13,7,5),mat(c));bloom.position.y=.58;g.add(bloom);g.position.set(x,0,z);scene.add(g)}
+for(let i=0;i<100;i++){let x=(Math.random()*28-14);if(Math.abs(x)>7||Math.random()<.35)makeFlower(x,-Math.random()*500,c=0xffffff*Math.random?0xd9a5c8:0xffda75)}
+
+const princess=new THREE.Group();const dress=new THREE.Mesh(new THREE.ConeGeometry(1.15,2.8,10),mat(0x8f153c,.55));dress.position.y=1.35;dress.castShadow=true;princess.add(dress);const bodice=new THREE.Mesh(new THREE.CylinderGeometry(.48,.62,1.15,10),mat(0xb62450));bodice.position.y=2.75;bodice.castShadow=true;princess.add(bodice);const head=new THREE.Mesh(new THREE.SphereGeometry(.42,16,12),mat(0xf0c4a1));head.position.y=3.55;head.castShadow=true;princess.add(head);const hair=new THREE.Mesh(new THREE.SphereGeometry(.46,12,8,0,Math.PI*2,0,1.7),mat(0x5a3821));hair.position.set(0,3.55,-.08);hair.scale.set(1.05,.95,.75);princess.add(hair);const crown=new THREE.Mesh(new THREE.CylinderGeometry(.38,.43,.18,8),mat(0xf2c84e,.3));crown.position.y=4.02;princess.add(crown);for(let i=0;i<3;i++){const point=new THREE.Mesh(new THREE.ConeGeometry(.09,.25,5),mat(0xffdc67));point.position.set(-.28+i*.28,4.18,0);princess.add(point)}princess.position.set(0,0,4);scene.add(princess);
+
+const obstacles=[],stars=[];
+function addRock(z){const lane=laneX[Math.floor(Math.random()*3)],g=new THREE.Group();const rock=new THREE.Mesh(new THREE.DodecahedronGeometry(.7,0),mat(0x73766a));rock.position.y=.65;rock.scale.set(1.2,.7,1);rock.castShadow=true;g.add(rock);g.position.set(lane,0,z);scene.add(g);obstacles.push(g)}
+function addStar(z){const lane=laneX[Math.floor(Math.random()*3)],g=new THREE.Group();const star=new THREE.Mesh(new THREE.OctahedronGeometry(.38,0),new THREE.MeshStandardMaterial({color:0xffdc55,emissive:0x9f7100,emissiveIntensity:.65,metalness:.5,roughness:.3}));star.position.y=1.55;star.castShadow=true;g.add(star);g.position.set(lane,0,z);scene.add(g);stars.push(g)}
+for(let i=0;i<25;i++){let z=-18-i*14-Math.random()*5;if(i%3!==0)addRock(z);else addStar(z);if(i%4===0)addStar(z-4)}
+
+let started=false,over=false,px=0,targetLane=1,vy=0,ground=0,speed=11,distance=0,collected=0;
+const distEl=document.getElementById('distance'),coinEl=document.getElementById('coins'),overlay=document.getElementById('overlay'),startCard=document.getElementById('start'),overCard=document.getElementById('gameover');
+function start(){started=true;over=false;distance=0;collected=0;speed=11;targetLane=1;px=0;vy=0;princess.position.set(0,0,4);obstacles.forEach(o=>o.position.z-=800);stars.forEach(s=>{s.position.z-=800});overCard.style.display='none';startCard.style.display='block';overlay.classList.add('hidden');distEl.textContent='0';coinEl.textContent='0'}
+document.getElementById('play').onclick=start;document.getElementById('again').onclick=start;
+function end(){over=true;started=false;document.getElementById('result').textContent=`Você correu ${Math.floor(distance)} metros e reuniu ${collected} estrelas`;startCard.style.display='none';overCard.style.display='block';overlay.classList.remove('hidden')}
+function jump(){if(started&&princess.position.y<=.05){vy=9.2}}
+function key(e){if(e.key==='ArrowLeft'||e.key==='a')targetLane=Math.max(0,targetLane-1);if(e.key==='ArrowRight'||e.key==='d')targetLane=Math.min(2,targetLane+1);if(e.key===' '||e.key==='ArrowUp'||e.key==='w')jump();}
+addEventListener('keydown',key);
+document.querySelectorAll('[data-action]').forEach(b=>{b.addEventListener('pointerdown',e=>{e.prevent.preventDefault();const a=b.dataset.action;if(a==='left')targetLane=Math.max(0,targetLane-1);if(a==='right')targetLane=Math.min(2,targetLane+1);if(a==='jump')jump()})});
+let lx=0;addEventListener('pointerdown',e=>lx=e.clientX);addEventListener('pointerup',e=>{if(!started)return;if(Math.abs(e.clientX-lx)>35){if(e.clientX>lx)targetLane=Math.min(2,targetLane+1);else targetLane=Math.max(0,targetLane-1)}});
+
+let last=performance.now();function animate(now){requestAnimationFrame(animate);let dt=Math.min((now-last)/1000,.033);last=now;
+if(started){speed=Math.min(19,11+distance*.008);distance+=speed*dt;px+=(laneX[targetLane]-px)*Math.min(1,dt*10);princess.position.x=px;if(vy!==0||princess.position.y>0){vy-=24*dt;princess.position.y+=vy*dt;if(princess.position.y<0){princess.position.y=0;vy=0}}princess.rotation.z=(laneX[targetLane]-px)*-.025;princess.rotation.y=Math.sin(now*.012)*.03;distEl.textContent=Math.floor(distance);speed&&obstacles.forEach(o=>{o.position.z+=speed*dt;if(o.position.z>12){o.position.z-=520;o.position.x=laneX[Math.floor(Math.random()*3)]}if(Math.abs(o.position.z-4)<.8&&Math.abs(o.position.x-px)<1.05&&princess.position.y<1.35)end()});stars.forEach(s=>{s.position.z+=speed*dt;s.rotation.y+=dt*3;if(s.position.z>12){s.position.z-=520;s.position.x=laneX[Math.floor(Math.random()*3)]}if(!s.userData.done&&Math.abs(s.position.z-4)<1&&Math.abs(s.position.x-px)<1.15&&princess.position.y<2.4){s.userData.done=true;s.visible=false;collected++;coinEl.textContent=collected}else if(s.position.z>12)s.userData.done=false;s.visible=!s.userData.done})}
+road.position.z=-220+((distance*.75)%8);grass.position.z=-220+((distance*.75)%8);camera.position.x+=(px*.18-camera.position.x)*.04;camera.lookAt(px*.12,2.2,-6);renderer.render(scene,camera)}requestAnimationFrame(animate);
+</script>
+</body>
+</html>
